@@ -8,8 +8,9 @@ from genlayer import *
 @allow_storage
 @dataclass
 class RiskAssessment:
-    token_id: str
-    source_url: str
+    contract_address: str
+    chain_id: str
+    token_symbol: str
     risk_score: u256
     risk_level: str
     red_flags: str
@@ -22,25 +23,40 @@ class GenTell(gl.Contract):
     def __init__(self):
         pass
 
-    def _assess_token(self, source_url: str, token_id: str) -> dict:
+    def _assess_token(self, chain_id: str, contract_address: str) -> dict:
+        chain_id = str(chain_id)
+        contract_address = str(contract_address)
+
         def get_risk_assessment() -> str:
-            web_data = gl.nondet.web.render(source_url, mode="text")
+            api_url = (
+                f"https://api.gopluslabs.io/api/v1/token_security/{chain_id}"
+                f"?contract_addresses={contract_address}"
+            )
+            response = gl.nondet.web.get(api_url)
+            data = json.loads(response.body.decode("utf-8"))
+            security = data.get("result", {}).get(contract_address.lower(), {})
+
+            if not security:
+                security = {"note": "No security data found for this contract address."}
+            elif security.get("holders"):
+                # Trim the holder list so the prompt stays a reasonable size.
+                security = {**security, "holders": security["holders"][:5]}
 
             task = f"""
-You are a crypto security analyst. Analyze the following web page content
-about a token ({token_id}) and assess its rug-pull / scam risk.
+You are a crypto security analyst. Analyze the following structured token
+security data (from GoPlus Security) for contract {contract_address} on
+chain ID {chain_id}, and assess its rug-pull / scam risk.
+
+Security data:
+{json.dumps(security)}
 
 Look for red flags such as:
-- Unlocked or absent liquidity
-- Highly concentrated holder distribution (few wallets holding most of supply)
-- Unverified or unaudited contract code
-- Anonymous team with no social presence
-- Mint / pause / blacklist functions giving the owner excessive control
-- Abnormal trading patterns for a recently deployed token
-- Missing or fake audit claims
-
-Web content:
-{web_data}
+- is_honeypot, is_blacklisted, transfer_pausable, selfdestruct
+- is_mintable, hidden_owner, can_take_back_ownership, owner_change_balance
+- slippage_modifiable, personal_slippage_modifiable, anti_whale_modifiable
+- Low is_open_source, high owner_percent/creator_percent, concentrated top holders
+- High buy_tax / sell_tax
+- Missing or empty security data (no info found for this contract)
 
 Respond in JSON:
 {{
@@ -54,8 +70,15 @@ nothing else. Don't include any other words or characters,
 your output must be only JSON without any formatting prefix or suffix.
 This result should be perfectly parsable by a JSON parser without errors.
         """
-            result = gl.nondet.exec_prompt(task, response_format="json")
-            return json.dumps(result, sort_keys=True)
+            llm_result = gl.nondet.exec_prompt(task, response_format="json")
+            combined = {
+                "risk_score": llm_result["risk_score"],
+                "risk_level": llm_result["risk_level"],
+                "red_flags": llm_result["red_flags"],
+                "summary": llm_result["summary"],
+                "token_symbol": security.get("token_symbol", ""),
+            }
+            return json.dumps(combined, sort_keys=True)
 
         result_json = json.loads(
             gl.eq_principle.prompt_comparative(
@@ -69,12 +92,16 @@ This result should be perfectly parsable by a JSON parser without errors.
         return result_json
 
     @gl.public.write
-    def assess_token(self, token_id: str, source_url: str) -> None:
-        result = self._assess_token(source_url, token_id)
+    def assess_token(self, chain_id: str, contract_address: str) -> None:
+        chain_id = str(chain_id)
+        contract_address = str(contract_address)
+        result = self._assess_token(chain_id, contract_address)
 
-        self.assessments[token_id] = RiskAssessment(
-            token_id=token_id,
-            source_url=source_url,
+        key = contract_address.lower()
+        self.assessments[key] = RiskAssessment(
+            contract_address=contract_address,
+            chain_id=chain_id,
+            token_symbol=str(result.get("token_symbol", "")),
             risk_score=u256(int(result["risk_score"])),
             risk_level=str(result["risk_level"]),
             red_flags=str(result["red_flags"]),
@@ -82,13 +109,15 @@ This result should be perfectly parsable by a JSON parser without errors.
         )
 
     @gl.public.view
-    def get_assessment(self, token_id: str) -> dict:
-        if token_id not in self.assessments:
-            raise Exception("No assessment found for this token")
-        a = self.assessments[token_id]
+    def get_assessment(self, contract_address: str) -> dict:
+        key = str(contract_address).lower()
+        if key not in self.assessments:
+            raise Exception("No assessment found for this contract")
+        a = self.assessments[key]
         return {
-            "token_id": a.token_id,
-            "source_url": a.source_url,
+            "contract_address": a.contract_address,
+            "chain_id": a.chain_id,
+            "token_symbol": a.token_symbol,
             "risk_score": a.risk_score,
             "risk_level": a.risk_level,
             "red_flags": a.red_flags,
@@ -99,8 +128,9 @@ This result should be perfectly parsable by a JSON parser without errors.
     def get_all_assessments(self) -> dict:
         return {
             k: {
-                "token_id": v.token_id,
-                "source_url": v.source_url,
+                "contract_address": v.contract_address,
+                "chain_id": v.chain_id,
+                "token_symbol": v.token_symbol,
                 "risk_score": v.risk_score,
                 "risk_level": v.risk_level,
                 "red_flags": v.red_flags,

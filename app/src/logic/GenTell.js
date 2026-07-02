@@ -32,27 +32,27 @@ class GenTell {
       functionName: "get_all_assessments",
       args: [],
     });
-    return Array.from(assessments.entries()).map(([tokenId, data]) => {
+    return Array.from(assessments.entries()).map(([address, data]) => {
       const obj = mapToObject(data);
-      return { ...obj, tokenId, riskScore: Number(obj.risk_score ?? 0) };
+      return { ...obj, address, riskScore: Number(obj.risk_score ?? 0) };
     });
   }
 
-  async getAssessment(tokenId) {
+  async getAssessment(contractAddress) {
     const data = await this.client.readContract({
       address: this.contractAddress,
       functionName: "get_assessment",
-      args: [tokenId],
+      args: [contractAddress],
     });
     const obj = mapToObject(data);
     return { ...obj, riskScore: Number(obj.risk_score ?? 0) };
   }
 
-  async assessToken(tokenId, sourceUrl) {
+  async assessToken(chainId, contractAddress) {
     const txHash = await this.client.writeContract({
       address: this.contractAddress,
       functionName: "assess_token",
-      args: [tokenId, sourceUrl],
+      args: [chainId, contractAddress],
     });
     const receipt = await this.client.waitForTransactionReceipt({
       hash: txHash,

@@ -2,15 +2,16 @@
   <div class="w-full max-w-xl mx-auto border border-white/20 rounded-2xl p-8 bg-black/70 backdrop-blur-sm">
     <div class="flex items-center justify-between mb-6">
       <div>
-        <p class="text-sm tracking-[0.25em] text-white/70 uppercase">{{ assessment.token_id }}</p>
+        <p class="text-sm tracking-[0.25em] text-white/90 uppercase">
+          {{ assessment.token_symbol || "Unknown token" }}
+        </p>
         <a
-          v-if="assessment.source_url"
-          :href="assessment.source_url"
+          :href="explorerUrl"
           target="_blank"
           rel="noopener"
-          class="text-sm text-white/50 hover:text-white/80 underline"
+          class="text-sm text-white/70 hover:text-white underline"
         >
-          source
+          {{ shortAddress }}
         </a>
       </div>
       <span class="text-sm uppercase tracking-widest border rounded-full px-3 py-1" :class="levelClasses">
@@ -21,7 +22,7 @@
     <div class="mb-6">
       <div class="flex items-end justify-between mb-2">
         <span class="text-5xl font-semibold">{{ assessment.riskScore }}</span>
-        <span class="text-white/60 text-sm mb-1">/ 100 risk</span>
+        <span class="text-white/80 text-sm mb-1">/ 100 risk</span>
       </div>
       <div class="w-full h-2 bg-white/15 rounded-full overflow-hidden">
         <div
@@ -31,15 +32,15 @@
       </div>
     </div>
 
-    <p class="text-white/90 mb-6 leading-relaxed">{{ assessment.summary }}</p>
+    <p class="text-white/95 mb-6 leading-relaxed">{{ assessment.summary }}</p>
 
     <div v-if="flagsList.length">
-      <p class="text-sm uppercase tracking-widest text-white/60 mb-2">Red flags</p>
+      <p class="text-sm uppercase tracking-widest text-white/80 mb-2">Red flags</p>
       <div class="flex flex-wrap gap-2">
         <span
           v-for="flag in flagsList"
           :key="flag"
-          class="text-sm border border-white/25 rounded-full px-3 py-1 text-white/90"
+          class="text-sm border border-white/25 rounded-full px-3 py-1 text-white/95"
         >
           {{ flag }}
         </span>
@@ -55,6 +56,15 @@ const props = defineProps({
   assessment: { type: Object, required: true },
 });
 
+const EXPLORERS = {
+  1: "https://etherscan.io/address/",
+  56: "https://bscscan.com/address/",
+  137: "https://polygonscan.com/address/",
+  42161: "https://arbiscan.io/address/",
+  10: "https://optimistic.etherscan.io/address/",
+  8453: "https://basescan.org/address/",
+};
+
 const flagsList = computed(() => {
   const raw = props.assessment.red_flags || "";
   if (!raw || raw.toLowerCase() === "none") return [];
@@ -62,6 +72,16 @@ const flagsList = computed(() => {
     .split(",")
     .map((f) => f.trim())
     .filter(Boolean);
+});
+
+const shortAddress = computed(() => {
+  const addr = props.assessment.contract_address || props.assessment.address || "";
+  return addr.length > 10 ? `${addr.slice(0, 6)}…${addr.slice(-4)}` : addr;
+});
+
+const explorerUrl = computed(() => {
+  const base = EXPLORERS[props.assessment.chain_id] || EXPLORERS[1];
+  return base + (props.assessment.contract_address || props.assessment.address || "");
 });
 
 const levelClasses = computed(() => {

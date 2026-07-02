@@ -5,14 +5,14 @@
     <div class="relative z-10 flex flex-col">
       <!-- Top bar -->
       <header class="flex items-center justify-between px-6 lg:px-12 py-6">
-        <span class="text-base tracking-widest uppercase text-white/80 font-medium">GenTell</span>
+        <span class="text-base tracking-widest uppercase text-white/95 font-medium">GenTell</span>
         <WalletBadge :address="userAddress" @connect="connectAccount" @disconnect="disconnectAccount" />
       </header>
 
       <!-- Hero + search -->
       <section class="flex flex-col items-center justify-center px-6 py-20 md:py-28">
         <SearchHero :loading="loading" :error="error" @submit="handleAnalyze" />
-        <p v-if="isDemo" class="text-white/50 text-sm mt-6">
+        <p v-if="isDemo" class="text-white/70 text-sm mt-6">
           Demo mode — no contract deployed yet, showing simulated results.
         </p>
       </section>
@@ -32,7 +32,7 @@
         <HowItWorks />
       </section>
 
-      <footer class="px-6 py-8 text-center text-white/45 text-sm border-t border-white/10">
+      <footer class="px-6 py-8 text-center text-white/65 text-sm border-t border-white/10">
         Built on GenLayer — intelligent contracts with native web + AI access.
       </footer>
     </div>
@@ -73,24 +73,25 @@ const DEMO_FLAGS = [
   "mint function enabled",
 ];
 
-function randomDemoAssessment(tokenId, sourceUrl) {
+function randomDemoAssessment(chainId, contractAddress) {
   const score = Math.floor(Math.random() * 100);
   const level = score < 25 ? "low" : score < 50 ? "medium" : score < 80 ? "high" : "critical";
   const flagCount = level === "low" ? 0 : level === "medium" ? 1 : level === "high" ? 2 : 3;
   const flags = [...DEMO_FLAGS].sort(() => Math.random() - 0.5).slice(0, flagCount);
   return {
-    token_id: tokenId,
-    source_url: sourceUrl,
+    contract_address: contractAddress,
+    chain_id: chainId,
+    token_symbol: "DEMO",
     riskScore: score,
     risk_level: level,
     red_flags: flags.length ? flags.join(", ") : "none",
     summary:
       level === "low"
-        ? "No major red flags detected — liquidity appears locked and the team is identifiable."
+        ? "No major red flags detected — contract looks clean and ownership is not concentrated."
         : level === "critical"
           ? "Multiple severe red flags detected — high probability of rug pull."
           : "Some concerning signals found — proceed with caution.",
-    tokenId,
+    address: contractAddress,
   };
 }
 
@@ -113,18 +114,21 @@ const showAssessment = (assessment) => {
   currentResult.value = assessment;
 };
 
-const handleAnalyze = async ({ tokenId, sourceUrl }) => {
+const handleAnalyze = async ({ chainId, contractAddress }) => {
   loading.value = true;
   error.value = "";
   try {
     if (isDemo.value) {
       await new Promise((resolve) => setTimeout(resolve, 1200));
-      const result = randomDemoAssessment(tokenId, sourceUrl);
+      const result = randomDemoAssessment(chainId, contractAddress);
       currentResult.value = result;
-      assessments.value = [result, ...assessments.value.filter((a) => a.tokenId !== tokenId)];
+      assessments.value = [
+        result,
+        ...assessments.value.filter((a) => a.address !== contractAddress),
+      ];
     } else {
-      await oracle.assessToken(tokenId, sourceUrl);
-      const result = await oracle.getAssessment(tokenId);
+      await oracle.assessToken(chainId, contractAddress);
+      const result = await oracle.getAssessment(contractAddress);
       currentResult.value = result;
       await loadAssessments();
     }

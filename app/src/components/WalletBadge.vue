@@ -8,10 +8,10 @@
       Connect
     </button>
     <div v-else class="flex items-center gap-3">
-      <span class="text-white/75">
+      <span class="text-white/90">
         <Address :address="address" />
       </span>
-      <button @click="$emit('disconnect')" class="text-white/55 hover:text-white transition-colors">
+      <button @click="$emit('disconnect')" class="text-white/75 hover:text-white transition-colors">
         Disconnect
       </button>
     </div>
