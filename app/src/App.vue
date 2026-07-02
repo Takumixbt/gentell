@@ -1,0 +1,141 @@
+<template>
+  <div class="relative min-h-screen bg-black text-white overflow-x-hidden">
+    <FlowField />
+
+    <div class="relative z-10 flex flex-col">
+      <!-- Top bar -->
+      <header class="flex items-center justify-between px-6 lg:px-12 py-6">
+        <span class="text-base tracking-widest uppercase text-white/80 font-medium">GenTell</span>
+        <WalletBadge :address="userAddress" @connect="connectAccount" @disconnect="disconnectAccount" />
+      </header>
+
+      <!-- Hero + search -->
+      <section class="flex flex-col items-center justify-center px-6 py-20 md:py-28">
+        <SearchHero :loading="loading" :error="error" @submit="handleAnalyze" />
+        <p v-if="isDemo" class="text-white/50 text-sm mt-6">
+          Demo mode — no contract deployed yet, showing simulated results.
+        </p>
+      </section>
+
+      <!-- Result -->
+      <section v-if="currentResult" class="px-6 pb-20">
+        <ResultPanel :assessment="currentResult" />
+      </section>
+
+      <!-- Recent assessments -->
+      <section class="px-6 pb-24">
+        <AssessmentsFeed :assessments="assessments" @select="showAssessment" />
+      </section>
+
+      <!-- How it works -->
+      <section class="px-6 pb-28">
+        <HowItWorks />
+      </section>
+
+      <footer class="px-6 py-8 text-center text-white/45 text-sm border-t border-white/10">
+        Built on GenLayer — intelligent contracts with native web + AI access.
+      </footer>
+    </div>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, onMounted } from "vue";
+import { account, createAccount, removeAccount } from "./services/genlayer";
+import GenTell from "./logic/GenTell";
+import FlowField from "./components/FlowField.vue";
+import WalletBadge from "./components/WalletBadge.vue";
+import SearchHero from "./components/SearchHero.vue";
+import ResultPanel from "./components/ResultPanel.vue";
+import AssessmentsFeed from "./components/AssessmentsFeed.vue";
+import HowItWorks from "./components/HowItWorks.vue";
+
+const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
+const studioUrl = import.meta.env.VITE_STUDIO_URL;
+const isDemo = computed(() => !contractAddress);
+
+const oracle = isDemo.value ? null : new GenTell(contractAddress, account, studioUrl);
+
+const userAccount = ref(account);
+const userAddress = computed(() => userAccount.value?.address ?? null);
+
+const assessments = ref([]);
+const currentResult = ref(null);
+const loading = ref(false);
+const error = ref("");
+
+const DEMO_FLAGS = [
+  "unlocked liquidity",
+  "concentrated holders",
+  "anonymous team",
+  "unverified contract",
+  "no audit",
+  "mint function enabled",
+];
+
+function randomDemoAssessment(tokenId, sourceUrl) {
+  const score = Math.floor(Math.random() * 100);
+  const level = score < 25 ? "low" : score < 50 ? "medium" : score < 80 ? "high" : "critical";
+  const flagCount = level === "low" ? 0 : level === "medium" ? 1 : level === "high" ? 2 : 3;
+  const flags = [...DEMO_FLAGS].sort(() => Math.random() - 0.5).slice(0, flagCount);
+  return {
+    token_id: tokenId,
+    source_url: sourceUrl,
+    riskScore: score,
+    risk_level: level,
+    red_flags: flags.length ? flags.join(", ") : "none",
+    summary:
+      level === "low"
+        ? "No major red flags detected — liquidity appears locked and the team is identifiable."
+        : level === "critical"
+          ? "Multiple severe red flags detected — high probability of rug pull."
+          : "Some concerning signals found — proceed with caution.",
+    tokenId,
+  };
+}
+
+const connectAccount = () => {
+  userAccount.value = createAccount();
+  if (oracle) oracle.updateAccount(userAccount.value);
+};
+
+const disconnectAccount = () => {
+  userAccount.value = null;
+  removeAccount();
+};
+
+const loadAssessments = async () => {
+  if (isDemo.value) return;
+  assessments.value = await oracle.getAllAssessments();
+};
+
+const showAssessment = (assessment) => {
+  currentResult.value = assessment;
+};
+
+const handleAnalyze = async ({ tokenId, sourceUrl }) => {
+  loading.value = true;
+  error.value = "";
+  try {
+    if (isDemo.value) {
+      await new Promise((resolve) => setTimeout(resolve, 1200));
+      const result = randomDemoAssessment(tokenId, sourceUrl);
+      currentResult.value = result;
+      assessments.value = [result, ...assessments.value.filter((a) => a.tokenId !== tokenId)];
+    } else {
+      await oracle.assessToken(tokenId, sourceUrl);
+      const result = await oracle.getAssessment(tokenId);
+      currentResult.value = result;
+      await loadAssessments();
+    }
+  } catch (e) {
+    error.value = e?.message ?? "Something went wrong analyzing this token.";
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(async () => {
+  await loadAssessments();
+});
+</script>
