@@ -57,7 +57,15 @@ This result should be perfectly parsable by a JSON parser without errors.
             result = gl.nondet.exec_prompt(task, response_format="json")
             return json.dumps(result, sort_keys=True)
 
-        result_json = json.loads(gl.eq_principle.strict_eq(get_risk_assessment))
+        result_json = json.loads(
+            gl.eq_principle.prompt_comparative(
+                get_risk_assessment,
+                "The results should agree on risk_score (within 10 points), "
+                "risk_level, and the overall set of red flags identified. "
+                "The summary field may be worded differently across validators "
+                "as long as it conveys the same risk assessment.",
+            )
+        )
         return result_json
 
     @gl.public.write
