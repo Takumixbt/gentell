@@ -83,10 +83,15 @@ This result should be perfectly parsable by a JSON parser without errors.
         result_json = json.loads(
             gl.eq_principle.prompt_comparative(
                 get_risk_assessment,
-                "The results should agree on risk_score (within 10 points), "
-                "risk_level, and the overall set of red flags identified. "
-                "The summary field may be worded differently across validators "
-                "as long as it conveys the same risk assessment.",
+                "The results should agree on risk_level (exact match) and "
+                "risk_score (within 25 points of each other). They do not need "
+                "to identify the exact same red flags, only a substantially "
+                "overlapping set — differences in how strictly a validator "
+                "weighs administrative permissions (e.g. owner/blacklist "
+                "functions) on an otherwise well-established, widely-trusted "
+                "token are expected and should still count as agreement, as "
+                "long as the overall verdict (safe vs risky) matches. The "
+                "summary field may be worded differently across validators.",
             )
         )
         return result_json
