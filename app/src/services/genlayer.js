@@ -12,6 +12,21 @@ export async function getConnectedAccount() {
   return accounts[0] ?? null;
 }
 
+async function addStudionetChain() {
+  await window.ethereum.request({
+    method: "wallet_addEthereumChain",
+    params: [
+      {
+        chainId: CHAIN_ID_HEX,
+        chainName: studionet.name,
+        rpcUrls: [...studionet.rpcUrls.default.http],
+        nativeCurrency: studionet.nativeCurrency,
+        blockExplorerUrls: [studionet.blockExplorers.default.url],
+      },
+    ],
+  });
+}
+
 export async function ensureCorrectChain() {
   const currentChainId = await window.ethereum.request({ method: "eth_chainId" });
   if (currentChainId === CHAIN_ID_HEX) return;
@@ -22,22 +37,22 @@ export async function ensureCorrectChain() {
       params: [{ chainId: CHAIN_ID_HEX }],
     });
   } catch (switchError) {
-    // 4902 = chain not yet added to the wallet.
-    if (switchError?.code === 4902) {
-      await window.ethereum.request({
-        method: "wallet_addEthereumChain",
-        params: [
-          {
-            chainId: CHAIN_ID_HEX,
-            chainName: studionet.name,
-            rpcUrls: [...studionet.rpcUrls.default.http],
-            nativeCurrency: studionet.nativeCurrency,
-            blockExplorerUrls: [studionet.blockExplorers.default.url],
-          },
-        ],
-      });
-    } else {
-      throw switchError;
+    if (switchError?.code === 4001) {
+      throw new Error(
+        "Switching networks was rejected — GenTell needs the GenLayer Studio Network to submit transactions."
+      );
+    }
+    // Any other failure (unrecognized chain, code 4902, or a wallet-specific
+    // variant of that error) most likely means the chain isn't added yet.
+    try {
+      await addStudionetChain();
+    } catch (addError) {
+      if (addError?.code === 4001) {
+        throw new Error(
+          "Adding the GenLayer Studio Network was rejected — it's required to submit transactions."
+        );
+      }
+      throw addError;
     }
   }
 }
