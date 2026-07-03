@@ -2,7 +2,7 @@
 
 A [GenLayer](https://genlayer.com) intelligent contract that scores crypto tokens for rug-pull / scam risk.
 
-Give it a token's info page (e.g. a DexScreener URL), and it scrapes the page and asks an LLM to assess red flags — unlocked liquidity, concentrated holder distribution, unverified contracts, anonymous teams, mint/pause/blacklist backdoors, and more. The assessment is reconciled across validators on-chain via `gl.eq_principle.strict_eq`, so the result isn't just one model's opinion — it's a consensus result.
+Give it a token's Ticker or CA and it scrapes the page and asks an LLM to assess red flags — unlocked liquidity, concentrated holder distribution, unverified contracts, anonymous teams, mint/pause/blacklist backdoors, and more. The assessment is reconciled across validators on-chain via `gl.eq_principle.strict_eq`, so the result isn't just one model's opinion — it's a consensus result.
 
 ## How it works
 
