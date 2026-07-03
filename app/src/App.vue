@@ -40,8 +40,14 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from "vue";
-import { account, createAccount, removeAccount } from "./services/genlayer";
+import { ref, computed, onMounted, onUnmounted } from "vue";
+import {
+  hasInjectedWallet,
+  getConnectedAccount,
+  requestWalletAccount,
+  onAccountsChanged,
+  offAccountsChanged,
+} from "./services/genlayer";
 import GenTell from "./logic/GenTell";
 import FlowField from "./components/FlowField.vue";
 import WalletBadge from "./components/WalletBadge.vue";
@@ -54,10 +60,9 @@ const contractAddress = import.meta.env.VITE_CONTRACT_ADDRESS;
 const studioUrl = import.meta.env.VITE_STUDIO_URL;
 const isDemo = computed(() => !contractAddress);
 
-const oracle = isDemo.value ? null : new GenTell(contractAddress, account, studioUrl);
+const oracle = isDemo.value ? null : new GenTell(contractAddress, { studioUrl });
 
-const userAccount = ref(account);
-const userAddress = computed(() => userAccount.value?.address ?? null);
+const userAddress = ref(null);
 
 const assessments = ref([]);
 const currentResult = ref(null);
@@ -95,15 +100,25 @@ function randomDemoAssessment(chainId, contractAddress) {
   };
 }
 
-const connectAccount = () => {
-  userAccount.value = createAccount();
-  if (oracle) oracle.updateAccount(userAccount.value);
+const connectAccount = async () => {
+  error.value = "";
+  try {
+    const address = await requestWalletAccount();
+    userAddress.value = address;
+    if (oracle) oracle.updateAccount(address);
+  } catch (e) {
+    error.value = e?.message ?? "Could not connect wallet.";
+  }
 };
 
 const disconnectAccount = () => {
-  userAccount.value = null;
-  removeAccount();
+  userAddress.value = null;
 };
+
+function handleAccountsChanged(accounts) {
+  userAddress.value = accounts[0] ?? null;
+  if (oracle && userAddress.value) oracle.updateAccount(userAddress.value);
+}
 
 const loadAssessments = async () => {
   if (isDemo.value) return;
@@ -127,6 +142,11 @@ const handleAnalyze = async ({ chainId, contractAddress }) => {
         ...assessments.value.filter((a) => a.address !== contractAddress),
       ];
     } else {
+      if (!userAddress.value) {
+        const address = await requestWalletAccount();
+        userAddress.value = address;
+        oracle.updateAccount(address);
+      }
       await oracle.assessToken(chainId, contractAddress);
       const result = await oracle.getAssessment(contractAddress);
       currentResult.value = result;
@@ -141,5 +161,17 @@ const handleAnalyze = async ({ chainId, contractAddress }) => {
 
 onMounted(async () => {
   await loadAssessments();
+  if (hasInjectedWallet()) {
+    const existing = await getConnectedAccount();
+    if (existing) {
+      userAddress.value = existing;
+      if (oracle) oracle.updateAccount(existing);
+    }
+    onAccountsChanged(handleAccountsChanged);
+  }
+});
+
+onUnmounted(() => {
+  offAccountsChanged(handleAccountsChanged);
 });
 </script>

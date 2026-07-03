@@ -1,5 +1,9 @@
 import { createClient } from "genlayer-js";
-import { simulator } from "genlayer-js/chains";
+import { studionet } from "genlayer-js/chains";
+
+function getInjectedProvider() {
+  return typeof window !== "undefined" ? window.ethereum : undefined;
+}
 
 function mapToObject(map) {
   return Array.from(map.entries()).reduce((obj, [key, value]) => {
@@ -12,18 +16,22 @@ class GenTell {
   contractAddress;
   client;
 
-  constructor(contractAddress, account = null, studioUrl = null) {
+  constructor(contractAddress, { address = null, studioUrl = null } = {}) {
     this.contractAddress = contractAddress;
     const config = {
-      chain: simulator,
-      ...(account ? { account } : {}),
+      chain: studionet,
+      ...(address ? { account: address, provider: getInjectedProvider() } : {}),
       ...(studioUrl ? { endpoint: studioUrl } : {}),
     };
     this.client = createClient(config);
   }
 
-  updateAccount(account) {
-    this.client = createClient({ chain: simulator, account });
+  updateAccount(address) {
+    this.client = createClient({
+      chain: studionet,
+      account: address,
+      provider: getInjectedProvider(),
+    });
   }
 
   async getAllAssessments() {
