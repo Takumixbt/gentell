@@ -5,13 +5,6 @@ function getInjectedProvider() {
   return typeof window !== "undefined" ? window.ethereum : undefined;
 }
 
-function mapToObject(map) {
-  return Array.from(map.entries()).reduce((obj, [key, value]) => {
-    obj[key] = value;
-    return obj;
-  }, {});
-}
-
 class GenTell {
   contractAddress;
   client;
@@ -40,19 +33,19 @@ class GenTell {
       functionName: "get_all_assessments",
       args: [],
     });
-    return Array.from(assessments.entries()).map(([address, data]) => {
-      const obj = mapToObject(data);
-      return { ...obj, address, riskScore: Number(obj.risk_score ?? 0) };
-    });
+    return Object.entries(assessments).map(([address, obj]) => ({
+      ...obj,
+      address,
+      riskScore: Number(obj.risk_score ?? 0),
+    }));
   }
 
   async getAssessment(contractAddress) {
-    const data = await this.client.readContract({
+    const obj = await this.client.readContract({
       address: this.contractAddress,
       functionName: "get_assessment",
       args: [contractAddress],
     });
-    const obj = mapToObject(data);
     return { ...obj, riskScore: Number(obj.risk_score ?? 0) };
   }
 
