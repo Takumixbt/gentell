@@ -45,6 +45,7 @@ import {
   hasInjectedWallet,
   getConnectedAccount,
   requestWalletAccount,
+  ensureCorrectChain,
   onAccountsChanged,
   offAccountsChanged,
 } from "./services/genlayer";
@@ -146,6 +147,8 @@ const handleAnalyze = async ({ chainId, contractAddress }) => {
         const address = await requestWalletAccount();
         userAddress.value = address;
         oracle.updateAccount(address);
+      } else {
+        await ensureCorrectChain();
       }
       await oracle.assessToken(chainId, contractAddress);
       const result = await oracle.getAssessment(contractAddress);
