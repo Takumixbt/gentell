@@ -1,13 +1,13 @@
 <template>
   <div class="w-full max-w-4xl mx-auto">
     <div class="flex items-center justify-between mb-4">
-      <h2 class="text-base uppercase tracking-widest text-white/85 font-medium">Recent Assessments</h2>
-      <button @click="sortDesc = !sortDesc" class="text-sm text-white/80 hover:text-white transition-colors">
+      <h2 class="text-base uppercase tracking-widest text-white/95 font-medium">Recent Assessments</h2>
+      <button @click="sortDesc = !sortDesc" class="text-sm text-white/90 hover:text-white transition-colors">
         Sort by risk {{ sortDesc ? "↓" : "↑" }}
       </button>
     </div>
 
-    <div v-if="!assessments.length" class="text-white/70 text-sm border border-white/15 rounded-xl p-8 text-center bg-black/40">
+    <div v-if="!assessments.length" class="text-white/90 text-sm border border-white/15 rounded-xl p-8 text-center bg-black/40">
       No tokens analyzed yet — be the first.
     </div>
 
@@ -19,11 +19,11 @@
         @click="$emit('select', a)"
       >
         <div class="min-w-0 mr-4">
-          <p class="font-medium text-white/95">{{ a.token_symbol || shortAddress(a.address) }}</p>
-          <p class="text-white/75 text-sm truncate">{{ a.summary }}</p>
+          <p class="font-medium text-white">{{ a.token_symbol || shortAddress(a.address) }}</p>
+          <p class="text-white/90 text-sm truncate">{{ a.summary }}</p>
         </div>
         <div class="flex items-center gap-4 shrink-0">
-          <span class="text-sm uppercase tracking-wider text-white/80">{{ a.risk_level }}</span>
+          <span class="text-sm uppercase tracking-wider text-white/95">{{ a.risk_level }}</span>
           <span class="text-lg font-semibold w-10 text-right">{{ a.riskScore }}</span>
         </div>
       </div>

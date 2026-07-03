@@ -12,7 +12,7 @@
       <!-- Hero + search -->
       <section class="flex flex-col items-center justify-center px-6 py-20 md:py-28">
         <SearchHero :loading="loading" :error="error" @submit="handleAnalyze" />
-        <p v-if="isDemo" class="text-white/70 text-sm mt-6">
+        <p v-if="isDemo" class="text-white/90 text-sm mt-6">
           Demo mode — no contract deployed yet, showing simulated results.
         </p>
       </section>
@@ -32,7 +32,7 @@
         <HowItWorks />
       </section>
 
-      <footer class="px-6 py-8 text-center text-white/65 text-sm border-t border-white/10">
+      <footer class="px-6 py-8 text-center text-white/85 text-sm border-t border-white/10">
         Built on GenLayer — intelligent contracts with native web + AI access.
       </footer>
     </div>

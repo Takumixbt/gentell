@@ -1,9 +1,9 @@
 <template>
   <div class="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-center">
     <div v-for="step in steps" :key="step.title">
-      <p class="text-white/40 text-5xl font-semibold mb-3">{{ step.n }}</p>
-      <h3 class="text-lg font-medium mb-2 text-white/95">{{ step.title }}</h3>
-      <p class="text-white/85 text-sm leading-relaxed">{{ step.desc }}</p>
+      <p class="text-white/60 text-5xl font-semibold mb-3">{{ step.n }}</p>
+      <h3 class="text-lg font-medium mb-2 text-white">{{ step.title }}</h3>
+      <p class="text-white/90 text-sm leading-relaxed">{{ step.desc }}</p>
     </div>
   </div>
 </template>
